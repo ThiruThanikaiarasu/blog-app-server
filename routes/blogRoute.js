@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 const { conditionalVerify, verifyUser } = require('../middleware/verify')
-const { getRandomPosts, addBlogPost } = require('../controllers/blogController')
+const { getRandomPosts, addBlogPost, getUserActionOfABlog, toggleLike } = require('../controllers/blogController')
 const upload = require('../middleware/upload')
 
 
@@ -17,6 +17,18 @@ router.post(
     upload.single('image'),
     verifyUser,
     addBlogPost
+)
+
+router.get(
+    '/:slug',
+    conditionalVerify,
+    getUserActionOfABlog
+)
+
+router.post(
+    '/:slug/like',
+    verifyUser,
+    toggleLike
 )
 
 module.exports = router

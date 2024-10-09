@@ -7,7 +7,7 @@ const conditionalVerify = (request, response, next) => {
         const authHeader = request.headers['cookie']
 
         if(authHeader) {
-            return verify(request, response, next)
+            return verifyUser(request, response, next)
         }
 
         next()

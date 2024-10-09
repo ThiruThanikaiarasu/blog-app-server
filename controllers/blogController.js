@@ -2,6 +2,8 @@ const { init } = require('@paralleldrive/cuid2')
 
 const blogModel = require("../models/blogModel")
 const userModel = require("../models/userModel")
+const blogLikesModel = require("../models/blogLikesModel")
+const { response } = require('express')
 
 
 const generateBookId = (title, user) => {
@@ -44,8 +46,7 @@ const addBlogPost = async (request, response) => {
             blogContent, 
             image
         })
-        console.log(newBlog)
-        // await newBlog.save()
+        await newBlog.save()
         response.status(201).send({ message: 'Blog successfully published' })
 
     } catch(error) {
@@ -112,8 +113,142 @@ const getRandomPosts = async (request, response) => {
     }
 }
 
+const getUserActionOfABlog = async (request, response) => {
+
+    const userId = request.user?._id || {}
+    const { slug } = request.params
+
+    try{
+
+        const pipeline = [
+            {
+              $match: {
+                slug: slug
+              }
+            },
+            {
+              $lookup: {
+                from: "bloglikes",
+                localField: "_id",
+                foreignField: "likedPost",
+                as: "likes"
+              }
+            },
+            {
+              $addFields: {
+                likesCount: {
+                  $size: {
+                    $ifNull: ["$likes", []]
+                  }
+                }
+              }
+            },
+          ]
+
+          if(userId) {
+            pipeline.push(
+                {
+                    $addFields: {
+                      isUserLiked: {
+                        $cond: {
+                          if: { 
+                            $gt: [
+                              { 
+                                $size: {
+                                  $filter: {
+                                    input: "$likes",
+                                    as: "like",
+                                    cond: { 
+                                      $eq: ["$$like.likedUser", userId] 
+                                    }
+                                  }
+                                }
+                              }, 
+                              0 
+                            ]
+                          },
+                          then: true,
+                          else: false
+                        }
+                      }
+                    }
+                  },
+                  {
+                    $project: {
+                        _id: 0,
+                        likesCount: 1,
+                        isUserLiked: 1,
+                      
+                    }
+                  }
+            )
+          }
+          else {
+            pipeline.push(
+                {
+                    $project: {
+                        _id: 0,
+                        likesCount: 1,
+                        isUserLiked: 1,
+                    }
+                }
+            )
+          }
+          
+        const likeDetails = await blogModel.aggregate(pipeline)
+
+        response.status(200).send({ message: "Query Performed", likeDetails})
+    }
+    catch(error) {
+        response.status(500).send({ message: error.message })
+    }
+}
+
+const toggleLike = async (request, response) => {
+    const { likedStatus } = request.body
+    const { slug } = request.params
+    const userId = request.user._id
+
+    try {
+        const blog = await blogModel.findOne({ slug }, { _id: 1 })
+
+        if (!blog) {
+            return response.status(404).send({ message: "Blog not found" })
+        }
+
+        const isUserAlreadyLiked = await blogLikesModel.findOne({ likedUser: userId, likedPost: blog._id })
+
+        if (likedStatus) {
+            if (isUserAlreadyLiked) {
+                return response.status(400).send({ message: "You have already liked this post" })
+            }
+
+            const newLike = new blogLikesModel({
+                likedUser: userId,
+                likedPost: blog._id
+            })
+
+            await newLike.save()
+            return response.status(201).send({ message: "Post liked", newLike })
+        } else {
+            if (!isUserAlreadyLiked) {
+                return response.status(400).send({ message: "You haven't liked this post yet" })
+            }
+
+            // await isUserAlreadyLiked.remove()
+            await blogLikesModel.deleteOne({ _id: isUserAlreadyLiked._id })
+            return response.status(200).send({ message: "Like removed" })
+        }
+    } catch (error) {
+        return response.status(500).send({ message: error.message })
+    }
+}
+
+
 
 module.exports = {
     getRandomPosts,
-    addBlogPost
+    addBlogPost,
+    getUserActionOfABlog,
+    toggleLike
 }
