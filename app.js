@@ -8,6 +8,7 @@ const {PORT} = require('./configuration/config')
 const connect = require('./database/connection')
 
 const userRoute = require('./routes/userRoute')
+const blogRoute = require('./routes/blogRoute')
 
 app.use(cors({
     origin: 'http://localhost:5173', 
@@ -23,6 +24,7 @@ app.get('/', (request, response) => {
 })
 
 app.use('/api/v1/user', userRoute)
+app.use('/api/v1/blog', blogRoute)
 
 connect() 
     .then( () => {
