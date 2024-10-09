@@ -6,6 +6,10 @@ const userSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'users', 
         },
+        slug: {
+            type: String,
+            required: [true, 'Slug is mandatory field'],
+        },
         title: {
             type: String, 
             required: [true, 'Title is mandatory field'],
