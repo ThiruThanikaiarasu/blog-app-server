@@ -4,6 +4,7 @@ const blogModel = require("../models/blogModel")
 const userModel = require("../models/userModel")
 const blogLikesModel = require("../models/blogLikesModel")
 const { response } = require('express')
+const blogBookMarkModel = require('../models/blogBookMarkModel')
 
 
 const generateBookId = (title, user) => {
@@ -113,96 +114,249 @@ const getRandomPosts = async (request, response) => {
     }
 }
 
-const getUserActionOfABlog = async (request, response) => {
+// const getUserActionOfABlog = async (request, response) => {
 
+//     const userId = request.user?._id || {}
+//     const { slug } = request.params
+
+//     try{
+
+//         const pipeline = [
+//             {
+//               $match: {
+//                 slug: slug
+//               }
+//             },
+//             {
+//               $lookup: {
+//                 from: "bloglikes",
+//                 localField: "_id",
+//                 foreignField: "likedPost",
+//                 as: "likes"
+//               }
+//             },
+//             {
+//               $addFields: {
+//                 likesCount: {
+//                   $size: {
+//                     $ifNull: ["$likes", []]
+//                   }
+//                 }
+//               }
+//             },
+//           ]
+
+//           if(userId) {
+//             pipeline.push(
+//                 {
+//                     $addFields: {
+//                       isUserLiked: {
+//                         $cond: {
+//                           if: { 
+//                             $gt: [
+//                               { 
+//                                 $size: {
+//                                   $filter: {
+//                                     input: "$likes",
+//                                     as: "like",
+//                                     cond: { 
+//                                       $eq: ["$$like.likedUser", userId] 
+//                                     }
+//                                   }
+//                                 }
+//                               }, 
+//                               0 
+//                             ]
+//                           },
+//                           then: true,
+//                           else: false
+//                         }
+//                       }
+//                     }
+//                   },
+//                   {
+//                     $addFields: {
+//                       userBookmarked: {
+//                         $cond: {
+//                           if: { 
+//                             $gt: [
+//                               { 
+//                                 $size: {
+//                                   $filter: {
+//                                     input: "$bookmarks",
+//                                     as: "bookmark",
+//                                     cond: { 
+//                                       $eq: ["$$bookmark.bookmarkedUser", userId] // Checking if bookmarkedUser matches
+//                                     }
+//                                   }
+//                                 }
+//                               }, 
+//                               0 
+//                             ]
+//                           },
+//                           then: true,
+//                           else: false
+//                         }
+//                       }
+//                     }
+//                   },
+//                   {
+//                     $project: {
+//                         _id: 0,
+//                         likesCount: 1,
+//                         isUserLiked: 1,
+//                         userBookmarked: 1
+//                     }
+//                   }
+//             )
+//           }
+//           else {
+//             pipeline.push(
+//                 {
+//                     $project: {
+//                         _id: 0,
+//                         likesCount: 1,
+//                         isUserLiked: 1,
+//                         userBookmarked: 1
+//                     }
+//                 }
+//             )
+//           }
+          
+//         const likeDetails = await blogModel.aggregate(pipeline)
+
+//         response.status(200).send({ message: "Query Performed", likeDetails})
+//     }
+//     catch(error) {
+//         response.status(500).send({ message: error.message })
+//     }
+// }
+
+const getUserActionOfABlog = async (request, response) => {
     const userId = request.user?._id || {}
     const { slug } = request.params
 
-    try{
-
+    try {
         const pipeline = [
             {
-              $match: {
-                slug: slug
-              }
-            },
-            {
-              $lookup: {
-                from: "bloglikes",
-                localField: "_id",
-                foreignField: "likedPost",
-                as: "likes"
-              }
-            },
-            {
-              $addFields: {
-                likesCount: {
-                  $size: {
-                    $ifNull: ["$likes", []]
-                  }
+                $match: {
+                    slug: slug
                 }
-              }
             },
-          ]
+            {
+                $lookup: {
+                    from: "bloglikes",
+                    localField: "_id",
+                    foreignField: "likedPost",
+                    as: "likes"
+                }
+            },
+            {
+                $lookup: {
+                    from: "blogbookmarks", 
+                    localField: "slug",
+                    foreignField: "bookmarkedPost",
+                    as: "bookmarks"
+                }
+            },
+            {
+                $addFields: {
+                    likesCount: {
+                        $size: {
+                            $ifNull: ["$likes", []]
+                        }
+                    },
+                    bookmarks: {
+                        $ifNull: ["$bookmarks", []]
+                    }
+                }
+            },
+        ]
 
-          if(userId) {
+        if (userId) {
             pipeline.push(
                 {
                     $addFields: {
-                      isUserLiked: {
-                        $cond: {
-                          if: { 
-                            $gt: [
-                              { 
-                                $size: {
-                                  $filter: {
-                                    input: "$likes",
-                                    as: "like",
-                                    cond: { 
-                                      $eq: ["$$like.likedUser", userId] 
-                                    }
-                                  }
-                                }
-                              }, 
-                              0 
-                            ]
-                          },
-                          then: true,
-                          else: false
+                        isUserLiked: {
+                            $cond: {
+                                if: {
+                                    $gt: [
+                                        {
+                                            $size: {
+                                                $filter: {
+                                                    input: "$likes",
+                                                    as: "like",
+                                                    cond: {
+                                                        $eq: ["$$like.likedUser", userId]
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        0
+                                    ]
+                                },
+                                then: true,
+                                else: false
+                            }
                         }
-                      }
                     }
-                  },
-                  {
+                },
+                {
+                    $addFields: {
+                        userBookmarked: {
+                            $cond: {
+                                if: {
+                                    $gt: [
+                                        {
+                                            $size: {
+                                                $filter: {
+                                                    input: "$bookmarks",
+                                                    as: "bookmark",
+                                                    cond: {
+                                                        $eq: ["$$bookmark.bookmarkedUser", userId] 
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        0
+                                    ]
+                                },
+                                then: true,
+                                else: false
+                            }
+                        }
+                    }
+                },
+                {
                     $project: {
                         _id: 0,
                         likesCount: 1,
                         isUserLiked: 1,
-                      
+                        userBookmarked: 1
                     }
-                  }
+                }
             )
-          }
-          else {
+        } else {
             pipeline.push(
                 {
                     $project: {
                         _id: 0,
                         likesCount: 1,
                         isUserLiked: 1,
+                        userBookmarked: 1
                     }
                 }
             )
-          }
-          
+        }
+
         const likeDetails = await blogModel.aggregate(pipeline)
 
-        response.status(200).send({ message: "Query Performed", likeDetails})
-    }
-    catch(error) {
+        response.status(200).send({ message: "Query Performed", likeDetails })
+    } catch (error) {
         response.status(500).send({ message: error.message })
     }
 }
+
 
 const toggleLike = async (request, response) => {
     const { likedStatus } = request.body
@@ -229,26 +383,61 @@ const toggleLike = async (request, response) => {
             })
 
             await newLike.save()
-            return response.status(201).send({ message: "Post liked", newLike })
-        } else {
-            if (!isUserAlreadyLiked) {
-                return response.status(400).send({ message: "You haven't liked this post yet" })
-            }
+            return response.status(201).send({ message: "Post liked" })
+        } 
 
-            // await isUserAlreadyLiked.remove()
-            await blogLikesModel.deleteOne({ _id: isUserAlreadyLiked._id })
-            return response.status(200).send({ message: "Like removed" })
+        if(!isUserAlreadyLiked) {
+            return response.status(400).send({ message: "You haven't liked this post yet" })
         }
-    } catch (error) {
+
+        await blogLikesModel.deleteOne({ _id: isUserAlreadyLiked._id })
+        response.status(200).send({ message: "Like removed" })
+        
+    } 
+    catch (error) {
         return response.status(500).send({ message: error.message })
     }
 }
 
+const toggleBookmark = async (request, response) => {
+    const { bookmarkedStatus } = request.body
+    const { slug } = request.params
+    const userId = request.user._id
 
+    try {
+        
+        const isUserAlreadyBookmarked = await blogBookMarkModel.findOne({ bookmarkedUser: userId, bookmarkedPost: slug })
+
+        if(bookmarkedStatus) {
+            if(isUserAlreadyBookmarked)  {
+                return response.status(400).send({ message: "You have already bookmarked this post"})
+            }
+
+            const newBookmark = new blogBookMarkModel({
+                bookmarkedUser: userId,
+                bookmarkedPost: slug
+            })
+
+            await newBookmark.save()
+            return response.status(201).send({ message: "Bookmark Added" })
+        }
+
+        if(!isUserAlreadyBookmarked) {
+            return response.status(400).send({ message: "You haven't bookmarked this post yet" })
+        }
+
+        await blogBookMarkModel.deleteOne({ _id: isUserAlreadyBookmarked._id })
+        response.status(200).send({ message: "Bookmark Removed" })
+    } 
+    catch (error) {
+        return response.status(500).send({ message: error.message })
+    }
+}
 
 module.exports = {
     getRandomPosts,
     addBlogPost,
     getUserActionOfABlog,
-    toggleLike
+    toggleLike,
+    toggleBookmark
 }
