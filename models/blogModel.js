@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const userSchema = new mongoose.Schema(
+const blogSchema = new mongoose.Schema(
     {
         author: {
             type: mongoose.Schema.Types.ObjectId,
@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema(
         slug: {
             type: String,
             required: [true, 'Slug is mandatory field'],
+            unique: true,
         },
         title: {
             type: String, 
@@ -36,4 +37,6 @@ const userSchema = new mongoose.Schema(
     }
 )
 
-module.exports = mongoose.model.blogPost || mongoose.model('blogPost', userSchema)
+blogSchema.index({ slug: 1})
+
+module.exports = mongoose.model.blogPost || mongoose.model('blogPost', blogSchema)

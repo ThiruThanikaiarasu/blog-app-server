@@ -7,8 +7,8 @@ const blogLikesSchema = new mongoose.Schema(
             ref: 'user'
         },
         likedPost: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'blogPost'
+            type: String,
+            required: [true, 'Reference to Liked post Slug field is mandatory'],
         },
     },
     {
