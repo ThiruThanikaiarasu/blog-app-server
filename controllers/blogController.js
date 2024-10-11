@@ -719,7 +719,29 @@ const getNestedCommentsOfParentComment = async (request, response) => {
     }
 };
 
+const editComment = async (request, response) => {
+    const { text, commentId } = request.body
+    const userId = request.user._id
+    try{
+        console.log(text)
+        console.log(commentId)
+        console.log(userId)
+        const existingComment = await blogCommentsModel.findOne({ _id: commentId })
+        console.log(existingComment)
 
+        if(!existingComment) {
+            return response.status(404).send({ message: "Comment not found"})
+        }
+
+        existingComment.text = text
+        await existingComment.save()
+
+        response.status(200).send({ message: "Comment edited successfully"})
+    }
+    catch(error) {
+        response.status(500).send({ message: error.message })
+    }
+}
 
 const toggleBookmark = async (request, response) => {
     const { bookmarkedStatus } = request.body
@@ -764,5 +786,6 @@ module.exports = {
     addRootComment,
     addReplyComment,
     getNestedCommentsOfParentComment,
+    editComment,
     toggleBookmark,
 }
