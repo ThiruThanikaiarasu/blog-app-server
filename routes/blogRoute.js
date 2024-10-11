@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 const { conditionalVerify, verifyUser } = require('../middleware/verify')
-const { getRandomPosts, addBlogPost, getUserActionOfABlog, toggleLike, toggleBookmark } = require('../controllers/blogController')
+const { getRandomPosts, addBlogPost, getUserActionOfABlog, toggleLike, toggleBookmark, addRootComment } = require('../controllers/blogController')
 const upload = require('../middleware/upload')
 
 
@@ -29,6 +29,20 @@ router.post(
     '/:slug/like',
     verifyUser,
     toggleLike
+)
+
+
+router.post(
+    '/addBlog',
+    upload.single('image'),
+    verifyUser,
+    addBlogPost
+)
+
+router.post(
+    '/:slug/addComment',
+    verifyUser,
+    addRootComment
 )
 
 router.post(

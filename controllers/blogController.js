@@ -5,6 +5,7 @@ const userModel = require("../models/userModel")
 const blogLikesModel = require("../models/blogLikesModel")
 const { response } = require('express')
 const blogBookMarkModel = require('../models/blogBookMarkModel')
+const blogCommentsModel = require('../models/blogCommentsModel')
 
 
 const generateBookId = (title, user) => {
@@ -114,6 +115,426 @@ const getRandomPosts = async (request, response) => {
     }
 }
 
+// const getUserActionOfABlog = async (request, response) => {
+//     const userId = request.user?._id || {}
+//     const { slug } = request.params
+
+//     try {
+//         const pipeline = [
+//             {
+//                 $match: {
+//                     slug: slug
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "bloglikes",
+//                     localField: "slug", 
+//                     foreignField: "likedPost", 
+//                     as: "likes"
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "blogbookmarks", 
+//                     localField: "slug", 
+//                     foreignField: "bookmarkedPost",
+//                     as: "bookmarks"
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "blogcomments",
+//                     localField: "_id",
+//                     foreignField: "commentedPost",
+//                     as: "comments"
+//                 }
+//             },
+//             {
+//                 $addFields: {
+//                     likesCount: {
+//                         $size: {
+//                             $ifNull: ["$likes", []]
+//                         }
+//                     },
+//                     bookmarks: {
+//                         $ifNull: ["$bookmarks", []]
+//                     },
+//                     commentsCount: {
+//                         $size: {
+//                             $ifNull: ["$comments", []]
+//                         }
+//                     }
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "users",
+//                     localField: "comments.commentedBy",
+//                     foreignField: "_id",
+//                     as: "commentAuthors",
+//                     pipeline: [
+//                         {
+//                             $project: {
+//                                 firstName: 1,
+//                                 image: {
+//                                     $concat: ["http://localhost:3500/api/v1/", "$image"]
+//                                 }
+//                             }
+//                         }
+//                     ]
+//                 }
+//             },
+//             {
+//                 $addFields: {
+//                     comments: {
+//                         $map: {
+//                             input: "$comments",
+//                             as: "comment",
+//                             in: {
+//                                 $mergeObjects: [
+//                                     "$$comment",
+//                                     {
+//                                         author: {
+//                                             $arrayElemAt: [
+//                                                 {
+//                                                     $filter: {
+//                                                         input: "$commentAuthors",
+//                                                         as: "author",
+//                                                         cond: {
+//                                                             $eq: ["$$author._id", "$$comment.commentedBy"]
+//                                                         }
+//                                                     }
+//                                                 },
+//                                                 0
+//                                             ]
+//                                         }
+//                                     }
+//                                 ]
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         ]
+
+//         if (userId) {
+//             pipeline.push(
+//                 {
+//                     $addFields: {
+//                         isUserLiked: {
+//                             $cond: {
+//                                 if: {
+//                                     $gt: [
+//                                         {
+//                                             $size: {
+//                                                 $filter: {
+//                                                     input: "$likes",
+//                                                     as: "like",
+//                                                     cond: {
+//                                                         $eq: ["$$like.likedUser", userId]
+//                                                     }
+//                                                 }
+//                                             }
+//                                         },
+//                                         0
+//                                     ]
+//                                 },
+//                                 then: true,
+//                                 else: false
+//                             }
+//                         },
+//                         userBookmarked: {
+//                             $cond: {
+//                                 if: {
+//                                     $gt: [
+//                                         {
+//                                             $size: {
+//                                                 $filter: {
+//                                                     input: "$bookmarks",
+//                                                     as: "bookmark",
+//                                                     cond: {
+//                                                         $eq: ["$$bookmark.bookmarkedUser", userId] 
+//                                                     }
+//                                                 }
+//                                             }
+//                                         },
+//                                         0
+//                                     ]
+//                                 },
+//                                 then: true,
+//                                 else: false
+//                             }
+//                         },
+//                         isUserComment: {
+//                             $cond: {
+//                                 if: {
+//                                     $gt: [
+//                                         {
+//                                             $size: {
+//                                                 $filter: {
+//                                                     input: "$comments",
+//                                                     as: "comment",
+//                                                     cond: {
+//                                                         $eq: ["$$comment.commentedBy", userId]
+//                                                     }
+//                                                 }
+//                                             }
+//                                         },
+//                                         0
+//                                     ]
+//                                 },
+//                                 then: true,
+//                                 else: false
+//                             }
+//                         }
+//                     }
+//                 },
+//                 {
+//                     $project: {
+//                         _id: 0,
+//                         likesCount: 1,
+//                         isUserLiked: 1,
+//                         userBookmarked: 1,
+//                         commentsCount: 1,
+//                         isUserComment: 1,
+//                         comments: 1 
+//                     }
+//                 }
+//             )
+//         } else {
+//             pipeline.push(
+//                 {
+//                     $project: {
+//                         _id: 0,
+//                         likesCount: 1,
+//                         isUserLiked: 1,
+//                         userBookmarked: 1,
+//                         commentsCount: 1,
+//                         comments: 1 
+//                     }
+//                 }
+//             )
+//         }
+
+//         const likeDetails = await blogModel.aggregate(pipeline)
+
+//         response.status(200).send({ message: "Query Performed", likeDetails })
+//     } catch (error) {
+//         response.status(500).send({ message: error.message })
+//     }
+// }
+// const getUserActionOfABlog = async (request, response) => {
+//     const userId = request.user?._id || {}
+//     const { slug } = request.params
+
+//     try {
+//         const pipeline = [
+//             {
+//                 $match: {
+//                     slug: slug
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "bloglikes",
+//                     localField: "slug", 
+//                     foreignField: "likedPost", 
+//                     as: "likes"
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "blogbookmarks", 
+//                     localField: "slug", 
+//                     foreignField: "bookmarkedPost",
+//                     as: "bookmarks"
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "blogcomments",
+//                     localField: "slug", // Match comments by the post's slug
+//                     foreignField: "commentedPost",
+//                     as: "comments"
+//                 }
+//             },
+//             {
+//                 $addFields: {
+//                     likesCount: {
+//                         $size: {
+//                             $ifNull: ["$likes", []]
+//                         }
+//                     },
+//                     bookmarks: {
+//                         $ifNull: ["$bookmarks", []]
+//                     },
+//                     commentsCount: {
+//                         $size: {
+//                             $ifNull: ["$comments", []]
+//                         }
+//                     }
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "users",
+//                     localField: "comments.commentedBy",
+//                     foreignField: "_id",
+//                     as: "commentAuthors",
+//                     pipeline: [
+//                         {
+//                             $project: {
+//                                 firstName: 1,
+//                                 image: {
+//                                     $concat: ["http://localhost:3500/api/v1/", "$image"]
+//                                 }
+//                             }
+//                         }
+//                     ]
+//                 }
+//             },
+//             {
+//                 $addFields: {
+//                     comments: {
+//                         $map: {
+//                             input: "$comments",
+//                             as: "comment",
+//                             in: {
+//                                 $mergeObjects: [
+//                                     "$$comment",
+//                                     {
+//                                         author: {
+//                                             $arrayElemAt: [
+//                                                 {
+//                                                     $filter: {
+//                                                         input: "$commentAuthors",
+//                                                         as: "author",
+//                                                         cond: {
+//                                                             $eq: ["$$author._id", "$$comment.commentedBy"]
+//                                                         }
+//                                                     }
+//                                                 },
+//                                                 0
+//                                             ]
+//                                         }
+//                                     }
+//                                 ]
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         ]
+
+//         // User-specific conditions for likes, bookmarks, and comments
+//         if (userId) {
+//             pipeline.push(
+//                 {
+//                     $addFields: {
+//                         isUserLiked: {
+//                             $cond: {
+//                                 if: {
+//                                     $gt: [
+//                                         {
+//                                             $size: {
+//                                                 $filter: {
+//                                                     input: "$likes",
+//                                                     as: "like",
+//                                                     cond: {
+//                                                         $eq: ["$$like.likedUser", userId]
+//                                                     }
+//                                                 }
+//                                             }
+//                                         },
+//                                         0
+//                                     ]
+//                                 },
+//                                 then: true,
+//                                 else: false
+//                             }
+//                         },
+//                         userBookmarked: {
+//                             $cond: {
+//                                 if: {
+//                                     $gt: [
+//                                         {
+//                                             $size: {
+//                                                 $filter: {
+//                                                     input: "$bookmarks",
+//                                                     as: "bookmark",
+//                                                     cond: {
+//                                                         $eq: ["$$bookmark.bookmarkedUser", userId] 
+//                                                     }
+//                                                 }
+//                                             }
+//                                         },
+//                                         0
+//                                     ]
+//                                 },
+//                                 then: true,
+//                                 else: false
+//                             }
+//                         },
+//                         isUserComment: {
+//                             $cond: {
+//                                 if: {
+//                                     $gt: [
+//                                         {
+//                                             $size: {
+//                                                 $filter: {
+//                                                     input: "$comments",
+//                                                     as: "comment",
+//                                                     cond: {
+//                                                         $eq: ["$$comment.commentedBy", userId]
+//                                                     }
+//                                                 }
+//                                             }
+//                                         },
+//                                         0
+//                                     ]
+//                                 },
+//                                 then: true,
+//                                 else: false
+//                             }
+//                         }
+//                     }
+//                 },
+//                 {
+//                     $project: {
+//                         _id: 0,
+//                         likesCount: 1,
+//                         isUserLiked: 1,
+//                         userBookmarked: 1,
+//                         commentsCount: 1,
+//                         isUserComment: 1,
+//                         comments: 1 
+//                     }
+//                 }
+//             )
+//         } else {
+//             pipeline.push(
+//                 {
+//                     $project: {
+//                         _id: 0,
+//                         likesCount: 1,
+//                         isUserLiked: 1,
+//                         userBookmarked: 1,
+//                         commentsCount: 1,
+//                         comments: 1 
+//                     }
+//                 }
+//             )
+//         }
+
+//         const likeDetails = await blogModel.aggregate(pipeline)
+
+//         response.status(200).send({ message: "Query Performed", likeDetails })
+//     } catch (error) {
+//         response.status(500).send({ message: error.message })
+//     }
+// }
+
 const getUserActionOfABlog = async (request, response) => {
     const userId = request.user?._id || {}
     const { slug } = request.params
@@ -144,8 +565,19 @@ const getUserActionOfABlog = async (request, response) => {
             {
                 $lookup: {
                     from: "blogcomments",
-                    localField: "_id",
-                    foreignField: "commentedPost",
+                    let: { postSlug: "$slug" }, // Use `let` to pass slug into the lookup
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$commentedPost", "$$postSlug"] }, // Match the commentedPost to the slug
+                                        { $eq: ["$parentComment", null] } // Only comments where parentComment is null
+                                    ]
+                                }
+                            }
+                        }
+                    ],
                     as: "comments"
                 }
             },
@@ -217,6 +649,7 @@ const getUserActionOfABlog = async (request, response) => {
             }
         ]
 
+        // User-specific conditions for likes, bookmarks, and comments
         if (userId) {
             pipeline.push(
                 {
@@ -357,7 +790,34 @@ const toggleLike = async (request, response) => {
         
     } 
     catch (error) {
-        return response.status(500).send({ message: error.message })
+        response.status(500).send({ message: error.message })
+    }
+}
+
+const addRootComment = async (request, response) => {
+    const { slug } = request.params
+    const userId = request.user._id
+    const { text } = request.body
+    try{
+        const blog = await blogModel.findOne({ slug })
+        if(!blog) {
+            response.status(404).send({ message: 'Blog not found' })
+        }
+        const initialReply = 0 
+
+        const newComment = new blogCommentsModel({
+            text,
+            commentedBy: userId,
+            commentedPost: slug,
+            parentComment: null, // since it's an root comment
+            numberOfReplies: initialReply
+        })
+
+        await newComment.save()
+        response.status(201).send({ message: "Comment added successfully"})
+    }
+    catch (error) {
+        response.status(500).send({ message: error.message })
     }
 }
 
@@ -402,4 +862,5 @@ module.exports = {
     getUserActionOfABlog,
     toggleLike,
     toggleBookmark,
+    addRootComment
 }
