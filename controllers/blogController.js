@@ -821,6 +821,51 @@ const addRootComment = async (request, response) => {
     }
 }
 
+const addReplyComment = async (request, response) => {
+    const { slug } = request.params
+    const { text, parentComment } = request.body
+    const userId = request.user._id
+
+    const session = await blogCommentsModel.startSession()
+    session.startTransaction()
+
+    try {
+        const initialReply = 0
+
+        const existingParentComment = await blogCommentsModel.findOne({ _id: parentComment }).session(session)
+
+        if (!existingParentComment) {
+            await session.abortTransaction()
+            session.endSession()
+            return response.status(404).send({ message: 'Parent comment not found' })
+        }
+
+        existingParentComment.numberOfReplies += 1
+        await existingParentComment.save({ session })
+
+        const newReplyComment = new blogCommentsModel({
+            text,
+            commentedBy: userId,
+            commentedPost: slug,
+            parentComment,
+            numberOfReplies: initialReply
+        })
+
+        await newReplyComment.save({ session })
+
+        await session.commitTransaction()
+        session.endSession()
+
+        response.status(201).send({ message: 'Reply added successfully' })
+    } catch (error) {
+        await session.abortTransaction()
+        session.endSession()
+
+        response.status(500).send({ message: error.message || 'An error occurred while adding the reply' })
+    }
+}
+
+
 const toggleBookmark = async (request, response) => {
     const { bookmarkedStatus } = request.body
     const { slug } = request.params
@@ -861,6 +906,7 @@ module.exports = {
     addBlogPost,
     getUserActionOfABlog,
     toggleLike,
+    addRootComment,
+    addReplyComment,
     toggleBookmark,
-    addRootComment
 }
