@@ -644,6 +644,7 @@ const getNestedCommentsOfParentComment = async (request, response) => {
     console.log("userId", userId)
 
     try {
+
         const pipeline = [
             {
                 $match: {
@@ -685,26 +686,29 @@ const getNestedCommentsOfParentComment = async (request, response) => {
                         ]
                     }
                 }
-            },
-            {
-                $addFields: {
-                    isUserComment: userId ? {
-                        $eq: ["$commentedBy", userId]
-                    } : false
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    text: 1,
-                    createdAt: 1,
-                    author: 1,
-                    isUserComment: 1,
-                    numberOfReplies: 1
-                }
             }
         ];
-
+        
+        if (userId) {
+            pipeline.push({
+                $addFields: {
+                    isUserComment: {
+                        $eq: ["$commentedBy", userId]
+                    }
+                }
+            });
+        }
+        
+        pipeline.push({
+            $project: {
+                _id: 1,
+                text: 1,
+                createdAt: 1,
+                author: 1,
+                isUserComment: 1,
+                numberOfReplies: 1
+            }
+        });        
         
         const replyComments = await blogCommentsModel.aggregate(pipeline);
         console.log(replyComments)
