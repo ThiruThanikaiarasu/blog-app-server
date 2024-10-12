@@ -16,7 +16,7 @@ app.use(cors({
     credentials: true
 }))
 app.use(cookieParser())
-app.use(express.urlencoded({ extended: false}))
+app.use(express.urlencoded({ extended: true}))
 app.use(express.json())
 
 
