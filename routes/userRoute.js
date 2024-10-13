@@ -6,6 +6,7 @@ const { login, logout } = require('../controllers/authController')
 const { verifyUser } = require('../middleware/verify')
 const { signup } = require('../controllers/authController')
 const upload = require('../middleware/upload')
+const { getUsersPostsAndBookmarks } = require('../controllers/userController')
 
 
 router.post(
@@ -16,13 +17,6 @@ router.post(
 
 router.post(
     '/login',
-    check('email')
-        .isEmail()
-        .withMessage('Enter a valid email address')
-        .normalizeEmail(),
-    check('password')
-        .not()
-        .isEmpty(),
     login
 )
 
@@ -31,6 +25,13 @@ router.get(
 
     verifyUser,
     logout
+)
+
+router.get(
+    '/posts',
+
+    verifyUser,
+    getUsersPostsAndBookmarks
 )
 
 module.exports = router 
