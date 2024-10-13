@@ -6,6 +6,8 @@ const blogLikesModel = require("../models/blogLikesModel")
 const blogBookMarkModel = require('../models/blogBookMarkModel')
 const blogCommentsModel = require('../models/blogCommentsModel')
 const mongoose = require('mongoose')
+const { IMAGE_BASE_PATH } = require('../configuration/config')
+
 
 const generateBookId = (title, user) => {
     const uniqueIdentifier = init({
@@ -63,7 +65,7 @@ const getRandomPosts = async (request, response) => {
             {
                 $addFields: {
                     image: {
-                        $concat: ["http://localhost:3500/api/v1/", "$image"]
+                        $concat: [IMAGE_BASE_PATH, "$image"]
                     }
                 }
             },
@@ -85,7 +87,7 @@ const getRandomPosts = async (request, response) => {
             {
                 $addFields: {
                     "author.image": {
-                        $concat: ["http://localhost:3500/api/v1/", "$author.image"]
+                        $concat: [IMAGE_BASE_PATH, "$author.image"]
                     }
                 }
             },
@@ -189,7 +191,7 @@ const getUserActionOfABlog = async (request, response) => {
                             $project: {
                                 firstName: 1,
                                 image: {
-                                    $concat: ["http://localhost:3500/api/v1/", "$image"]
+                                    $concat: [IMAGE_BASE_PATH, "$image"]
                                 }
                             }
                         }
@@ -453,7 +455,7 @@ const getNestedCommentsOfParentComment = async (request, response) => {
                             $project: {
                                 firstName: 1,
                                 image: {
-                                    $concat: ["http://localhost:3500/api/v1/", "$image"]
+                                    $concat: [IMAGE_BASE_PATH, "$image"]
                                 }
                             }
                         }

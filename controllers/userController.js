@@ -1,6 +1,6 @@
 const blogBookMarkModel = require("../models/blogBookMarkModel")
 const blogModel = require("../models/blogModel")
-const imageBasePath = "http://localhost:3500/api/v1/"
+const { IMAGE_BASE_PATH } = require('../configuration/config')
 
 const getUsersPostsAndBookmarks = async (request, response) => {
     const userId = request.user._id
@@ -33,11 +33,11 @@ const getUsersPostsAndBookmarks = async (request, response) => {
                     createdAt: 1,
                     updatedAt: 1,
                     image : { 
-                        $concat: [imageBasePath, "/", "$image"] 
+                        $concat: [IMAGE_BASE_PATH, "/", "$image"] 
                     },
                     "author.firstName": 1,
                     "author.image": { 
-                        $concat: [imageBasePath, "/", "$author.image"] 
+                        $concat: [IMAGE_BASE_PATH, "/", "$author.image"] 
                     },
                 }
             }
@@ -97,14 +97,14 @@ const getUsersPostsAndBookmarks = async (request, response) => {
                 {
                   $addFields: {
                     "blog.image": {
-                      $concat: [imageBasePath, "$blog.image"]
+                      $concat: [IMAGE_BASE_PATH, "$blog.image"]
                     }
                   }
                 },
                 {
                   $addFields: {
                     "blog.author.image": {
-                      $concat: [imageBasePath, "$blog.author.image"]
+                      $concat: [IMAGE_BASE_PATH, "$blog.author.image"]
                     }
                   }
                 },
