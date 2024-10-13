@@ -37,7 +37,7 @@ const addBlogPost = async (request, response) => {
         if(!existingAuthor) {
             response.status(404).send({ message: 'User not found' })
         }
-        const image = 'public/images/' + filename
+        const image = 'images/' + filename
 
         const slug = generateBookId(title, existingAuthor._id)
 

@@ -12,7 +12,7 @@ const signup = async (request, response) => {
         if(existingUser) {
             return response.status(409).send({ message: 'Email id already exist' })
         }
-        const image = 'public/images/' + filename
+        const image = 'images/' + filename
         const userToBeRegistered = new userModel({firstName, lastName, email, password, image})
 
         await userToBeRegistered.save()

@@ -1,5 +1,6 @@
 const express = require('express')
 const app = express()
+const path = require('path')
 
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
@@ -9,7 +10,6 @@ const connect = require('./database/connection')
 
 const userRoute = require('./routes/userRoute')
 const blogRoute = require('./routes/blogRoute')
-const imageRoute = require('./routes/imageRoute')
 
 app.use(cors({
     origin: CORS_ORIGIN_URL, 
@@ -19,6 +19,7 @@ app.use(cookieParser())
 app.use(express.urlencoded({ extended: true}))
 app.use(express.json())
 
+app.use(express.static(path.join(__dirname, 'public')))
 
 app.get('/', (request, response) => {
     response.status(200).send({ message: "It's working."})
@@ -26,7 +27,6 @@ app.get('/', (request, response) => {
 
 app.use('/api/v1/user', userRoute)
 app.use('/api/v1/blog', blogRoute)
-app.use('/api/v1', imageRoute)
 
 connect() 
     .then( () => {

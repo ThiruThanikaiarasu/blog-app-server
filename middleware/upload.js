@@ -1,9 +1,16 @@
 const multer = require('multer')
 const path = require('path')
+const fs = require('fs')
+
+const imagesDir = path.join(__dirname, '../public/images')
+
+if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true })
+}
 
 const storage = multer.diskStorage({
     destination: function(request, file, callback) {
-        callback(null, path.join(__dirname, '../public/images'))
+        callback(null, imagesDir)
     },
     filename: function(request, file, callback) {
         const sanitizedFileName = file.originalname.replace(/\s+/g, '_')
