@@ -104,6 +104,11 @@ const getRandomPosts = async (request, response) => {
                     "author.createdAt": 0,
                     "author.updatedAt": 0,
                 }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
             }
         ]
 
@@ -196,7 +201,7 @@ const getUserActionOfABlog = async (request, response) => {
                             }
                         }
                     ]
-                }
+                },
             },
             {
                 $addFields: {
