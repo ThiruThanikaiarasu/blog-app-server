@@ -4,7 +4,7 @@ const app = express()
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
 
-const {PORT} = require('./configuration/config')
+const {PORT, CORS_ORIGIN_URL} = require('./configuration/config')
 const connect = require('./database/connection')
 
 const userRoute = require('./routes/userRoute')
@@ -12,7 +12,7 @@ const blogRoute = require('./routes/blogRoute')
 const imageRoute = require('./routes/imageRoute')
 
 app.use(cors({
-    origin: 'http://localhost:5173', 
+    origin: CORS_ORIGIN_URL, 
     credentials: true
 }))
 app.use(cookieParser())
