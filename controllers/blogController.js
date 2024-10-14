@@ -8,6 +8,7 @@ const blogCommentsModel = require('../models/blogCommentsModel')
 const mongoose = require('mongoose')
 const cloudinary = require('../configuration/cloudinaryConfig')
 const streamifier = require('streamifier')
+const { response } = require('express')
 
 
 const generateBookId = (title, user) => {
@@ -138,11 +139,217 @@ const getRandomPosts = async (request, response) => {
     }
 }
 
+const getAPostDetails = async (request, response) => {
+    const userId = request?.user._id || {}
+    const { slug } = request.params
+
+    const existingBlog = await blogModel.findOne({slug})
+    if(!existingBlog) {
+        return response.status(404).send({ message: "Blog not found"})
+    }
+
+    try {
+        const pipeline = [
+            {
+                $match: {
+                    slug: slug
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "author",
+                    foreignField: "_id",
+                    as: "authorDetails"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$authorDetails",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "bloglikes",
+                    localField: "slug",
+                    foreignField: "likedPost",
+                    as: "likes"
+                }
+            },
+            {
+                $lookup: {
+                    from: "blogbookmarks",
+                    localField: "slug",
+                    foreignField: "bookmarkedPost",
+                    as: "bookmarks"
+                }
+            },
+            {
+                $lookup: {
+                    from: "blogcomments",
+                    let: { postSlug: "$slug" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$commentedPost", "$$postSlug"] },
+                                        { $eq: ["$parentComment", null] }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "commentedBy",
+                                foreignField: "_id",
+                                as: "commentAuthorDetails",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            firstName: 1,
+                                            image: 1
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $unwind: {
+                                path: "$commentAuthorDetails",
+                                preserveNullAndEmptyArrays: true
+                            }
+                        }
+                    ],
+                    as: "comments"
+                }
+            },
+            {
+                $addFields: {
+                    likesCount: {
+                        $size: {
+                            $ifNull: ["$likes", []]
+                        }
+                    },
+                    bookmarks: {
+                        $ifNull: ["$bookmarks", []]
+                    },
+                    commentsCount: {
+                        $size: {
+                            $ifNull: ["$comments", []]
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    comments: {
+                        $map: {
+                            input: "$comments",
+                            as: "comment",
+                            in: {
+                                $mergeObjects: [
+                                    "$$comment",
+                                    {
+                                        author: {
+                                            firstName: "$$comment.commentAuthorDetails.firstName",
+                                            image: "$$comment.commentAuthorDetails.image"
+                                        },
+                                        isUserComment: {
+                                            $cond: {
+                                                if: {
+                                                    $eq: ["$$comment.commentedBy", userId]
+                                                },
+                                                then: true,
+                                                else: false
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    title: 1,
+                    description: 1,
+                    content: 1,
+                    createdAt: 1,
+                    image: 1,
+                    author: {
+                        firstName: "$authorDetails.firstName",
+                        image: "$authorDetails.image"
+                    },
+                    likesCount: 1,
+                    commentsCount: 1,
+                    bookmarks: 1,
+                    comments: 1,
+                    isUserLiked: {
+                        $cond: {
+                            if: {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: "$likes",
+                                                as: "like",
+                                                cond: { $eq: ["$$like.likedUser", userId] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            },
+                            then: true,
+                            else: false
+                        }
+                    },
+                    userBookmarked: {
+                        $cond: {
+                            if: {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: "$bookmarks",
+                                                as: "bookmark",
+                                                cond: { $eq: ["$$bookmark.bookmarkedUser", userId] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            },
+                            then: true,
+                            else: false
+                        }
+                    }
+                }
+            }
+        ];
+
+        const blogDetails = await blogModel.aggregate(pipeline);
+        response.status(200).json(blogDetails[0]);
+    } catch (error) {
+        response.status(500).send({ message: error.message });
+    }
+}
+
+
 const getUserActionOfABlog = async (request, response) => {
-    const userId = request.user?._id || {}
+    const userId = request?.user?._id || {}
     const { slug } = request.params
 
     try {
+
+        const existingBlog = await blogModel.findOne({slug})
+        if(!existingBlog) {
+            return response.status(404).send({ message: "Blog not found"})
+        }
 
         const pipeline = [
             {
@@ -331,8 +538,8 @@ const getUserActionOfABlog = async (request, response) => {
                 }
             });
         }        
-
         const likeDetails = await blogModel.aggregate(pipeline)
+        console.log(likeDetails)
 
         response.status(200).send({ message: "Query Performed", likeDetails })
     } catch (error) {
@@ -590,6 +797,7 @@ const toggleBookmark = async (request, response) => {
 module.exports = {
     getRandomPosts,
     addBlogPost,
+    getAPostDetails,
     getUserActionOfABlog,
     toggleLike,
     addRootComment,
