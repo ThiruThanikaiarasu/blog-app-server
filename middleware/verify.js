@@ -19,9 +19,7 @@ const conditionalVerify = (request, response, next) => {
 
 const verifyUser = async (request, response, next) => {
     try {
-        console.log(request.headers)
         const authHeader = request.headers['cookie']
-        console.log(authHeader)
 
         if(!authHeader){
             return response.status(401).send({ message: 'Token not found' })
