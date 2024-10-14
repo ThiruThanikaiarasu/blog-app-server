@@ -33,12 +33,12 @@ router.post(
 )
 
 
-router.post(
-    '/addBlog',
-    upload.single('image'),
-    verifyUser,
-    addBlogPost
-)
+// router.post(
+//     '/addBlog',
+//     upload.single('image'),
+//     verifyUser,
+//     addBlogPost
+// )
 
 router.post(
     '/:slug/addComment',

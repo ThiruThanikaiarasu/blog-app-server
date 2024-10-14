@@ -1,6 +1,5 @@
 const blogBookMarkModel = require("../models/blogBookMarkModel")
 const blogModel = require("../models/blogModel")
-const { IMAGE_BASE_PATH } = require('../configuration/config')
 
 const getUsersPostsAndBookmarks = async (request, response) => {
     const userId = request.user._id
@@ -32,13 +31,9 @@ const getUsersPostsAndBookmarks = async (request, response) => {
                     blogContent: 1,
                     createdAt: 1,
                     updatedAt: 1,
-                    image : { 
-                        $concat: [IMAGE_BASE_PATH, "/", "$image"] 
-                    },
+                    image : 1,
                     "author.firstName": 1,
-                    "author.image": { 
-                        $concat: [IMAGE_BASE_PATH, "/", "$author.image"] 
-                    },
+                    "author.image": 1,
                 }
             }
         ])
@@ -93,20 +88,6 @@ const getUsersPostsAndBookmarks = async (request, response) => {
                   $addFields: {
                     "blog.author": "$author"
                       }
-                },
-                {
-                  $addFields: {
-                    "blog.image": {
-                      $concat: [IMAGE_BASE_PATH, "$blog.image"]
-                    }
-                  }
-                },
-                {
-                  $addFields: {
-                    "blog.author.image": {
-                      $concat: [IMAGE_BASE_PATH, "$blog.author.image"]
-                    }
-                  }
                 },
                 {
                   $project: {

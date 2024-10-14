@@ -1,19 +1,52 @@
 const userModel = require('../models/userModel')
 const initialData = require('../database/initialData')
+const cloudinary = require('../configuration/cloudinaryConfig')
+const streamifier = require('streamifier')
 
 const bcrypt = require('bcryptjs')
 
 const signup = async (request, response) => {
     const {firstName, lastName, email, password} = request.body
-    const {filename} = request.file
 
     try{
         const existingUser = await userModel.findOne({email})
         if(existingUser) {
             return response.status(409).send({ message: 'Email id already exist' })
         }
-        const image = 'images/' + filename
-        const userToBeRegistered = new userModel({firstName, lastName, email, password, image})
+        
+        let imageURL = ''
+        if(request.file) {
+            console.log(request.file)
+            try {
+                const uploadImage = await new Promise((resolve, reject) => {
+                    const stream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: "blog-app",          
+                            use_filename: true,           
+                            unique_filename: false,      
+                        },
+                        (error, result) => {
+                            if (result) {
+                                resolve(result);
+                            } else {
+                                reject(error);
+                            }
+                        }
+                    );
+
+                    streamifier.createReadStream(request.file.buffer).pipe(stream);
+                });
+                imageURL = uploadImage.secure_url
+            }
+            catch(error) {
+                console.error('Cloudinary upload error:', error)
+                return response.status(500).send({ message: 'Image upload failed' })
+            }
+        } else {
+            return response.status(400).send({ message: "Error while uploading image, try again later"})
+        }
+
+        const userToBeRegistered = new userModel({firstName, lastName, email, password, image: imageURL})
 
         await userToBeRegistered.save()
         const {password: userPassword, _id: userId, ...userData} = userToBeRegistered?._doc

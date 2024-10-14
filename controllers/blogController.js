@@ -6,7 +6,8 @@ const blogLikesModel = require("../models/blogLikesModel")
 const blogBookMarkModel = require('../models/blogBookMarkModel')
 const blogCommentsModel = require('../models/blogCommentsModel')
 const mongoose = require('mongoose')
-const { IMAGE_BASE_PATH } = require('../configuration/config')
+const cloudinary = require('../configuration/cloudinaryConfig')
+const streamifier = require('streamifier')
 
 
 const generateBookId = (title, user) => {
@@ -29,7 +30,6 @@ const generateBookId = (title, user) => {
 
 const addBlogPost = async (request, response) => {
     const {title, description, blogContent} = request.body
-    const {filename} = request.file
     const {email} = request.user 
 
     try{
@@ -37,7 +37,38 @@ const addBlogPost = async (request, response) => {
         if(!existingAuthor) {
             response.status(404).send({ message: 'User not found' })
         }
-        const image = 'images/' + filename
+        
+        let imageURL = ''
+        if(request.file) {
+            console.log(request.file)
+            try {
+                const uploadImage = await new Promise((resolve, reject) => {
+                    const stream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: "blog-app",          
+                            use_filename: true,           
+                            unique_filename: false,      
+                        },
+                        (error, result) => {
+                            if (result) {
+                                resolve(result);
+                            } else {
+                                reject(error);
+                            }
+                        }
+                    );
+
+                    streamifier.createReadStream(request.file.buffer).pipe(stream);
+                });
+                imageURL = uploadImage.secure_url
+            }
+            catch(error) {
+                console.error('Cloudinary upload error:', error)
+                return response.status(500).send({ message: 'Image upload failed' })
+            }
+        } else {
+            return response.status(400).send({ message: "Error while uploading image, try again later"})
+        }
 
         const slug = generateBookId(title, existingAuthor._id)
 
@@ -47,7 +78,7 @@ const addBlogPost = async (request, response) => {
             title, 
             description, 
             blogContent, 
-            image
+            image: imageURL
         })
         await newBlog.save()
         response.status(201).send({ message: 'Blog successfully published' })
@@ -63,13 +94,6 @@ const getRandomPosts = async (request, response) => {
     try {
         const pipeline = [
             {
-                $addFields: {
-                    image: {
-                        $concat: [IMAGE_BASE_PATH, "$image"]
-                    }
-                }
-            },
-            {
                 $lookup: {
                     from: "users",
                     localField: "author",
@@ -81,13 +105,6 @@ const getRandomPosts = async (request, response) => {
                 $addFields: {
                     author: {
                         $first: "$author"
-                    }
-                }
-            },
-            {
-                $addFields: {
-                    "author.image": {
-                        $concat: [IMAGE_BASE_PATH, "$author.image"]
                     }
                 }
             },
@@ -195,9 +212,7 @@ const getUserActionOfABlog = async (request, response) => {
                         {
                             $project: {
                                 firstName: 1,
-                                image: {
-                                    $concat: [IMAGE_BASE_PATH, "$image"]
-                                }
+                                image: 1,
                             }
                         }
                     ]
@@ -227,7 +242,6 @@ const getUserActionOfABlog = async (request, response) => {
                                                 0
                                             ]
                                         },
-                                        // Add the isUserComment field for each comment
                                         isUserComment: {
                                             $cond: {
                                                 if: {
@@ -246,7 +260,6 @@ const getUserActionOfABlog = async (request, response) => {
             }
         ];
         
-        // Add the general user-specific fields
         if (userId) {
             pipeline.push(
                 {
@@ -379,7 +392,7 @@ const addRootComment = async (request, response) => {
             text,
             commentedBy: userId,
             commentedPost: slug,
-            parentComment: null, // since it's an root comment
+            parentComment: null, 
             numberOfReplies: initialReply
         })
 
@@ -459,9 +472,7 @@ const getNestedCommentsOfParentComment = async (request, response) => {
                         {
                             $project: {
                                 firstName: 1,
-                                image: {
-                                    $concat: [IMAGE_BASE_PATH, "$image"]
-                                }
+                                image: 1,
                             }
                         }
                     ]
