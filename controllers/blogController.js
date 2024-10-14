@@ -41,7 +41,6 @@ const addBlogPost = async (request, response) => {
         
         let imageURL = ''
         if(request.file) {
-            console.log(request.file)
             try {
                 const uploadImage = await new Promise((resolve, reject) => {
                     const stream = cloudinary.uploader.upload_stream(
@@ -140,15 +139,15 @@ const getRandomPosts = async (request, response) => {
 }
 
 const getAPostDetails = async (request, response) => {
-    const userId = request?.user._id || {}
-    const { slug } = request.params
-
-    const existingBlog = await blogModel.findOne({slug})
-    if(!existingBlog) {
-        return response.status(404).send({ message: "Blog not found"})
-    }
+    const userId = request?.user?._id || {};
+    const { slug } = request.params;
 
     try {
+        const existingBlog = await blogModel.findOne({ slug });
+        if (!existingBlog) {
+            return response.status(404).send({ message: "Blog not found" });
+        }
+
         const pipeline = [
             {
                 $match: {
@@ -272,8 +271,77 @@ const getAPostDetails = async (request, response) => {
                         }
                     }
                 }
-            },
-            {
+            }
+        ];
+
+        if (userId) {
+            pipeline.push(
+                {
+                    $addFields: {
+                        isUserLiked: {
+                            $cond: {
+                                if: {
+                                    $gt: [
+                                        {
+                                            $size: {
+                                                $filter: {
+                                                    input: "$likes",
+                                                    as: "like",
+                                                    cond: { $eq: ["$$like.likedUser", userId] }
+                                                }
+                                            }
+                                        },
+                                        0
+                                    ]
+                                },
+                                then: true,
+                                else: false
+                            }
+                        },
+                        userBookmarked: {
+                            $cond: {
+                                if: {
+                                    $gt: [
+                                        {
+                                            $size: {
+                                                $filter: {
+                                                    input: "$bookmarks",
+                                                    as: "bookmark",
+                                                    cond: { $eq: ["$$bookmark.bookmarkedUser", userId] }
+                                                }
+                                            }
+                                        },
+                                        0
+                                    ]
+                                },
+                                then: true,
+                                else: false
+                            }
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        title: 1,
+                        description: 1,
+                        content: 1,
+                        createdAt: 1,
+                        image: 1,
+                        author: {
+                            firstName: "$authorDetails.firstName",
+                            image: "$authorDetails.image"
+                        },
+                        likesCount: 1,
+                        commentsCount: 1,
+                        bookmarks: 1,
+                        comments: 1,
+                        isUserLiked: 1,
+                        userBookmarked: 1
+                    }
+                }
+            );
+        } else {
+            pipeline.push({
                 $project: {
                     title: 1,
                     description: 1,
@@ -287,50 +355,10 @@ const getAPostDetails = async (request, response) => {
                     likesCount: 1,
                     commentsCount: 1,
                     bookmarks: 1,
-                    comments: 1,
-                    isUserLiked: {
-                        $cond: {
-                            if: {
-                                $gt: [
-                                    {
-                                        $size: {
-                                            $filter: {
-                                                input: "$likes",
-                                                as: "like",
-                                                cond: { $eq: ["$$like.likedUser", userId] }
-                                            }
-                                        }
-                                    },
-                                    0
-                                ]
-                            },
-                            then: true,
-                            else: false
-                        }
-                    },
-                    userBookmarked: {
-                        $cond: {
-                            if: {
-                                $gt: [
-                                    {
-                                        $size: {
-                                            $filter: {
-                                                input: "$bookmarks",
-                                                as: "bookmark",
-                                                cond: { $eq: ["$$bookmark.bookmarkedUser", userId] }
-                                            }
-                                        }
-                                    },
-                                    0
-                                ]
-                            },
-                            then: true,
-                            else: false
-                        }
-                    }
+                    comments: 1
                 }
-            }
-        ];
+            });
+        }
 
         const blogDetails = await blogModel.aggregate(pipeline);
         response.status(200).json(blogDetails[0]);
@@ -539,7 +567,6 @@ const getUserActionOfABlog = async (request, response) => {
             });
         }        
         const likeDetails = await blogModel.aggregate(pipeline)
-        console.log(likeDetails)
 
         response.status(200).send({ message: "Query Performed", likeDetails })
     } catch (error) {
@@ -658,8 +685,7 @@ const addReplyComment = async (request, response) => {
 const getNestedCommentsOfParentComment = async (request, response) => {
     const { parentComment } = request.body
     const userId = request?.user?._id || null
-    console.log("parentComment",parentComment)
-    console.log("userId", userId)
+
 
     try {
 
@@ -727,7 +753,6 @@ const getNestedCommentsOfParentComment = async (request, response) => {
         });        
         
         const replyComments = await blogCommentsModel.aggregate(pipeline);
-        console.log(replyComments)
         
         return response.status(200).json(replyComments);
     } catch (error) {
@@ -739,11 +764,7 @@ const editComment = async (request, response) => {
     const { text, commentId } = request.body
     const userId = request.user._id
     try{
-        console.log(text)
-        console.log(commentId)
-        console.log(userId)
         const existingComment = await blogCommentsModel.findOne({ _id: commentId })
-        console.log(existingComment)
 
         if(!existingComment) {
             return response.status(404).send({ message: "Comment not found"})
