@@ -24,6 +24,10 @@ const blogSchema = new mongoose.Schema(
             type: String, 
             required: [true, 'Blog content is mandatory field'],
         },
+        tag: {
+            type: String, 
+            required: [true, 'Tag is mandatory field'],
+        },
         image: {
             type: String, 
             required: true,

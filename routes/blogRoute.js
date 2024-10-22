@@ -2,15 +2,20 @@ const express = require('express')
 const router = express.Router()
 
 const { conditionalVerify, verifyUser } = require('../middleware/verify')
-const { getRandomPosts, addBlogPost, getUserActionOfABlog, toggleLike, toggleBookmark, addRootComment, addReplyComment, getNestedCommentsOfParentComment, editComment, getAPostDetails } = require('../controllers/blogController')
+const { getRandomPosts, addBlogPost, getUserActionOfABlog, toggleLike, toggleBookmark, addRootComment, addReplyComment, getNestedCommentsOfParentComment, editComment, getAPostDetails, getHomeFeed } = require('../controllers/blogController')
 const upload = require('../middleware/upload')
-const { verify } = require('jsonwebtoken')
 
 
 router.get(
     '/getPosts',
     conditionalVerify,
     getRandomPosts
+)
+
+router.get(
+    '/feed',
+    conditionalVerify,
+    getHomeFeed
 )
 
 router.post(

@@ -30,7 +30,7 @@ const generateBookId = (title, user) => {
 }
 
 const addBlogPost = async (request, response) => {
-    const {title, description, blogContent} = request.body
+    const {title, description, blogContent, tag} = request.body
     const {email} = request.user 
 
     try{
@@ -78,12 +78,65 @@ const addBlogPost = async (request, response) => {
             title, 
             description, 
             blogContent, 
+            tag,
             image: imageURL
         })
         await newBlog.save()
         response.status(201).send({ message: 'Blog successfully published' })
 
     } catch(error) {
+        response.status(500).send({ message: error.message })
+    }
+}
+
+const getHomeFeed = async (request, response) => {
+    const {_id} = request.user || {}
+
+    try {
+        const pipeline = [
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "author",
+                    foreignField: "_id",
+                    as: "author"
+                }
+            },
+            {
+                $addFields: {
+                    author: {
+                        $first: "$author"
+                    }
+                }
+            },
+            {
+                $project: {
+                    "_id": 0,
+                    "__v": 0,
+                    "updatedAt": 0,
+                    "author.password": 0,
+                    "author._id": 0,
+                    "author.__v": 0,
+                    "author.role": 0,
+                    "author.createdAt": 0,
+                    "author.updatedAt": 0,
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1  
+                }
+            },
+            {
+                $limit: 5 
+            }
+        ]
+
+        const latestPosts = await blogModel.aggregate(pipeline)
+
+        response.status(200).send({ data: latestPosts, message: 'Latest Blog Posts' })
+    } 
+    catch(error) {
         response.status(500).send({ message: error.message })
     }
 }
@@ -816,6 +869,7 @@ const toggleBookmark = async (request, response) => {
 }
 
 module.exports = {
+    getHomeFeed,
     getRandomPosts,
     addBlogPost,
     getAPostDetails,
