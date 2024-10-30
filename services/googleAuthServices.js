@@ -1,10 +1,12 @@
 const oAuth2Client = require('../configuration/googleOAuthConfig')
 
 const generateAuthUrl = () => {
+    const scopes = ['openid', 'profile', 'email']
     return oAuth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: 'https://www.googleapis.com/auth/userinfo.profile openid',
         prompt: 'consent',
+        scope: scopes
     })
 }
 
@@ -46,8 +48,43 @@ const fetchUserData = async (accessToken) => {
     }
 }
 
+const verifyAccessToken = async (idToken) => {
+    try {
+        const ticket = await oAuth2Client.verifyIdToken({
+            idToken: idToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        })
+        const payload = ticket.getPayload()
+        return payload
+    } catch (error) {
+        throw new Error('Invalid access token')
+    }
+}
+
+const refreshIdToken = async (refreshToken) => {
+    try {
+        const response = await fetch('https://your-auth-provider.com/refresh', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+        })
+
+        if (!response.ok) {
+            throw new Error('Failed to refresh ID token')
+        }
+
+        const data = await response.json()
+        return data.id_token
+    } catch (error) {
+        throw error
+    }
+}
 
 module.exports = {
     generateAuthUrl,
-    getUserDataFromCode
+    getUserDataFromCode,
+    verifyAccessToken,
+    refreshIdToken
 }

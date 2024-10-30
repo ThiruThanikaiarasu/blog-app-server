@@ -7,6 +7,11 @@ const { profileColors } = require('../configuration/constants')
 
 const userSchema = new mongoose.Schema(
     {
+        accountType: {
+            type: String,
+            enum: ['google', 'email'],
+            default: 'email'
+        },
         firstName: {
             type: String, 
             required: [true, 'First name is mandatory field'],
@@ -26,7 +31,9 @@ const userSchema = new mongoose.Schema(
         },
         password: {
             type: String, 
-            required: [true, 'Password is mandatory field'],
+            required: function() {
+                return this.signInType === 'email';
+            },
             select: false, 
             max: 25,
         },
