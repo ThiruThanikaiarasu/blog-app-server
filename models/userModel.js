@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 
 const { ACCESS_TOKEN } = require('../configuration/config')
+const { profileColors } = require('../configuration/constants')
 
 const userSchema = new mongoose.Schema(
     {
@@ -31,7 +32,12 @@ const userSchema = new mongoose.Schema(
         },
         image: {
             type: String, 
-            required: true,
+            // required: true,
+        },
+        profile: {
+            letter: { type: String },
+            background: { type: String },
+            color: { type: String },
         },
         role: {
             type: String,
@@ -49,6 +55,18 @@ const userSchema = new mongoose.Schema(
 
 userSchema.pre('save', function(next) {
     const user = this
+
+    if (!user.profile || !user.profile.letter) {
+        const firstLetter = user.firstName.charAt(0).toUpperCase();
+        const randomColor = profileColors[Math.floor(Math.random() * profileColors.length)];
+
+        user.profile = {
+            letter: firstLetter,
+            background: randomColor.background,
+            color: randomColor.color,
+        };
+    }
+
 
     if(!user.isModified('password')) return next()
     bcrypt.genSalt(10, (error, salt) => {

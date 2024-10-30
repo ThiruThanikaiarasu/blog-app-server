@@ -10,6 +10,8 @@ const connect = require('./database/connection')
 
 const userRoute = require('./routes/userRoute')
 const blogRoute = require('./routes/blogRoute')
+const googleAuthRoute = require('./routes/googleAuthRoute')
+const authRoute = require('./routes/authRoute')
 
 app.use(cors({
     origin: CORS_ORIGIN_URL, 
@@ -27,6 +29,8 @@ app.get('/', (request, response) => {
 
 app.use('/api/v1/user', userRoute)
 app.use('/api/v1/blog', blogRoute)
+app.use('/api/v1/google-auth', googleAuthRoute)
+app.use('/api/v1/auth', authRoute)
 
 connect() 
     .then( () => {
