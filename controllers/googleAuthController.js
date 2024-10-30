@@ -16,7 +16,6 @@ const getGoogleAuthPageUrl = (request, response) => {
 } 
 
 const handleGoogleAuthCallback = async (request, response) => {
-    console.log("called")
     const code = request.query.code
 
     try {
@@ -30,7 +29,6 @@ const handleGoogleAuthCallback = async (request, response) => {
 }
 
 const verifyToken = async (request, response) => {
-    console.log("first")
     const cookieString = request.headers['cookie']
     const parseCookies = (cookieString) => {
         if (!cookieString) {
@@ -76,7 +74,6 @@ const verifyToken = async (request, response) => {
                 image: formattedUserData.image,
                 email: formattedUserData.email
             })
-            console.log(newUser)
             await newUser.save()
         }
         
