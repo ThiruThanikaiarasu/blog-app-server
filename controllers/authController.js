@@ -74,6 +74,9 @@ const logout = async (request, response) => {
             return response.status(204).send({ message: 'No Content' })
         }
     
+        const expiredDate = new Date(Date.now() - 1000).toUTCString()
+
+        response.setHeader('Set-Cookie', `cookieName=; expires=${expiredDate}; path=/; Secure; HttpOnly`)
         response.setHeader('Clear-Site-Data', '"cookies"')
         response.status(200).send({ message: "Logged out!" })
     }
