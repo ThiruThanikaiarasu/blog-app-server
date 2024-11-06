@@ -43,15 +43,15 @@ const verifyUser = async (request, response, next) => {
             if(password) {
                 const {password, ...data} = existingUser?._doc
                 request.user = data
-                next()
+                return next()
             } else {
                 request.user = existingUser
-                next()
+                return next()
             }
         })
     }
     catch(error) {
-        response.status(500).json({ message: error.message })
+        return response.status(500).json({ message: error.message })
     }
 }
 

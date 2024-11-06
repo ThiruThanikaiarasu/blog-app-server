@@ -74,9 +74,6 @@ const logout = async (request, response) => {
             return response.status(204).send({ message: 'No Content' })
         }
     
-        const cookie = authHeader.split('=')[1]
-        const accessToken = cookie.split(';')[0]
-    
         response.setHeader('Clear-Site-Data', '"cookies"')
         response.status(200).send({ message: "Logged out!" })
     }
