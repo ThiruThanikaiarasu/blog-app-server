@@ -20,7 +20,7 @@ router.post(
     login
 )
 
-router.get(
+router.post(
     '/logout',
 
     verifyUser,
